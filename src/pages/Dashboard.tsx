@@ -1,49 +1,53 @@
+import React from 'react';
+import { format } from 'date-fns';
+import {
+  HiArrowRight,
+  HiCalendar,
+  HiCircleStack,
+  HiHome,
+  HiInboxStack,
+  HiUserGroup,
+} from 'react-icons/hi2';
+
 import Logo from '@/src/components/Logo';
 import { Card } from '@/src/components/ui/Card';
 import Header from '@/src/components/ui/Header';
 import { Link } from '@/src/components/ui/Link';
 import { DefaultMainCardHeader, MainCard } from '@/src/components/ui/MainCard';
-import { format } from 'date-fns';
-import {
-  HiArrowRight,
-  HiArrowTopRightOnSquare,
-  HiCalendar,
-  HiCircleStack,
-  HiCube,
-  HiHome,
-  HiInboxStack,
-  HiUserGroup,
-} from 'react-icons/hi2';
 import ProposalCard from '@/src/components/governance/ProposalCard';
+import { Skeleton } from '@/src/components/ui/Skeleton';
+import { useAllProposals } from '../hooks/useAllProposals';
+import { useDaoTransfers } from '@/src/hooks/useDaoTransfers';
+import TokenAmount from '@/src/components/ui/TokenAmount';
+import { Address, AddressLength } from '@/src/components/ui/Address';
 
 const Dashboard = () => {
   const dao = {
-    name: 'Example DAO',
-    ensDomain: 'example.eth',
-    description: 'A sample DAO dashboard',
+    name: 'Openvino DAO',
+    ensDomain: 'openvino.eth',
+    description: 'Tokenization, traceability, transparency.',
     creationDate: new Date(),
-    address: '0x1234...abcd',
-    links: [{ name: 'Website', url: 'https://example.org' }],
+    address: import.meta.env.VITE_TIMELOCK_ADDRESS,
+    links: [
+      { name: 'Openvino', url: 'https://openvino.org/' },
+      { name: 'Openvino Exchange', url: 'https://openvino.exchange.org/' },
+    ],
   };
 
-  const proposals = [
-    {
-      id: '1',
-      status: 'Active',
-      creatorAddress: '0x123',
-      startDate: new Date(),
-      endDate: new Date(),
-      result: { yes: 100n, no: 10n },
-      totalVotingWeight: 200n,
-      metadata: { title: 'Mock Proposal', summary: 'Lorem ipsum...' },
-    },
-  ];
-
-  const transfers = [];
+  const {
+    proposals,
+    loading: loadingProposals,
+    error: errorProposals,
+  } = useAllProposals();
+  const {
+    daoTransfers,
+    loading: loadingTransfers,
+    error: errorTransfers,
+  } = useDaoTransfers();
 
   const members = [
-    { address: '0xabc', weight: 100n },
-    { address: '0xdef', weight: 200n },
+    { address: '0x87495d92Ad7655BF8bcC6447ea715498238517aF', weight: 100n },
+    { address: '0xcbAD825A1F37139D78CdbC1198b8291F65762DED', weight: 150n },
   ];
 
   return (
@@ -71,15 +75,30 @@ const Dashboard = () => {
       <MainCard
         className="col-span-full lg:col-span-4"
         icon={HiInboxStack}
-        header={<DefaultMainCardHeader value={1} label="proposals created" />}
+        header={
+          <DefaultMainCardHeader
+            value={proposals.length}
+            label="proposals created"
+          />
+        }
         aside={<Link label="New proposal" to="/governance/new-proposal" />}
       >
-        {proposals.map((p) => (
-          <ProposalCard key={p.id} proposal={p} />
-        ))}
-        <Link to="/governance" className="flex gap-1 text-sm text-primary">
-          View all proposals <HiArrowRight />
-        </Link>
+        {loadingProposals ? (
+          <Skeleton className="h-24 w-full" />
+        ) : errorProposals ? (
+          <p className="text-red-500">{errorProposals}</p>
+        ) : proposals.length > 0 ? (
+          <>
+            {proposals.slice(0, 2).map((p) => (
+              <ProposalCard key={p.id} proposal={p} />
+            ))}
+            <Link to="/governance" className="flex gap-1 text-sm text-white">
+              View all proposals <HiArrowRight />
+            </Link>
+          </>
+        ) : (
+          <p>No proposals found</p>
+        )}
       </MainCard>
 
       {/* Side column */}
@@ -87,19 +106,69 @@ const Dashboard = () => {
         {/* Transfers */}
         <MainCard
           icon={HiCircleStack}
-          header={<DefaultMainCardHeader value={0} label="transfers" />}
+          header={
+            <DefaultMainCardHeader
+              value={daoTransfers?.length ?? 0}
+              label="transfers"
+            />
+          }
         >
-          <p>No transfers found</p>
+          {loadingTransfers ? (
+            <Skeleton className="h-16 w-full" />
+          ) : errorTransfers ? (
+            <p className="text-red-500">{errorTransfers}</p>
+          ) : daoTransfers && daoTransfers.length > 0 ? (
+            <ul className="space-y-2 text-sm">
+              {daoTransfers.slice(0, 2).map((t) => (
+                <li key={t.transactionId}>
+                  <div className="flex justify-between">
+                    <div>
+                      <p className="font-semibold capitalize">{t.type}</p>
+                      <p className="text-xs">
+                        {t.creationDate.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <TokenAmount
+                        amount={t.amount}
+                        tokenDecimals={t.decimals}
+                        symbol={t.tokenSymbol}
+                        sign={t.type === 'withdraw' ? '-' : '+'}
+                      />
+                      <Address
+                        address={t.transactionId}
+                        maxLength={AddressLength.Small}
+                        hasLink
+                        showCopy={false}
+                        link={`https://sepolia.basescan.org/tx/${t.transactionId}`}
+                      />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No transfers found</p>
+          )}
         </MainCard>
 
         {/* Members */}
         <MainCard
           icon={HiUserGroup}
-          header={<DefaultMainCardHeader value={2} label="members" />}
+          header={
+            <DefaultMainCardHeader value={members.length} label="members" />
+          }
         >
-          <ul className="text-sm">
+          <ul className="space-y-1 text-sm">
             {members.map((m, i) => (
-              <li key={i}>{m.address}</li>
+              <li key={i}>
+                <Address
+                  address={m.address}
+                  maxLength={AddressLength.Medium}
+                  hasLink
+                  link={`https://sepolia.basescan.org/address/${m.address}`}
+                />
+              </li>
             ))}
           </ul>
         </MainCard>

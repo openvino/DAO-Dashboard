@@ -64,6 +64,7 @@ const DaoTokensList = ({
                 maxLength={AddressLength.Small}
                 hasLink
                 showCopy
+                link={`https://sepolia.basescan.org/address/${balance.address}`}
               />
             </span>
           </div>
@@ -118,33 +119,37 @@ export const DaoTransfersList = ({
 
   return (
     <div className="space-y-4">
-      {transfers.map((transfer) => (
-        <Card key={transfer.transactionId} size="sm" variant="light">
-          <div className="flex flex-row justify-between">
-            <div className="text-left">
-              <p className="font-bold capitalize">{transfer.type}</p>
-              <p className="text-sm">{format(transfer.creationDate, 'Pp')}</p>
-            </div>
-            <div className="flex flex-col items-end text-right">
-              <TokenAmount
-                className="font-bold"
-                amount={transfer.amount}
-                tokenDecimals={transfer.decimals}
-                symbol={transfer.tokenSymbol}
-                sign={getSign(transfer.type)}
-              />
-              <div className="text-popover-foreground/80">
-                <Address
-                  address={daoTransferAddress(transfer)}
-                  maxLength={AddressLength.Small}
-                  hasLink
-                  showCopy
+      {transfers.map((transfer) => {
+        const addr = daoTransferAddress(transfer);
+        return (
+          <Card key={transfer.transactionId} size="sm" variant="light">
+            <div className="flex flex-row justify-between">
+              <div className="text-left">
+                <p className="font-bold capitalize">{transfer.type}</p>
+                <p className="text-sm">{format(transfer.creationDate, 'Pp')}</p>
+              </div>
+              <div className="flex flex-col items-end text-right">
+                <TokenAmount
+                  className="font-bold"
+                  amount={transfer.amount}
+                  tokenDecimals={transfer.decimals}
+                  symbol={transfer.tokenSymbol}
+                  sign={getSign(transfer.type)}
                 />
+                <div className="text-popover-foreground/80">
+                  <Address
+                    address={addr}
+                    maxLength={AddressLength.Small}
+                    hasLink
+                    showCopy
+                    link={`https://sepolia.basescan.org/address/${addr}`}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 };

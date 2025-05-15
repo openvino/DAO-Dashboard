@@ -101,7 +101,7 @@ export function useProposalById(id: string, blockNumber: number) {
           return block
             ? new Date(block.timestamp * 1000)
             : new Date(
-                Date.now() +
+                creationBlock.timestamp * 1000 +
                   (blockNum - creationBlock.number) * secondsPerBlock * 1000
               );
         };

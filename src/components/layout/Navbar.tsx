@@ -28,17 +28,17 @@ const navItems: NavItem[] = [
     url: '/governance',
   },
   {
-    label: 'Finance',
+    label: 'Treasury',
     url: '/finance',
   },
-  {
-    label: 'Verification',
-    url: '/verification',
-  },
-  {
-    label: 'Settings',
-    url: '/settings',
-  },
+  // {
+  //   label: 'Verification',
+  //   url: '/verification',
+  // },
+  // {
+  //   label: 'Settings',
+  //   url: '/settings',
+  // },
 ];
 
 const Navitem = ({ item }: { item: NavItem }) => {

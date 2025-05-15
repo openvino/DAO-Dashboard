@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+import { format } from 'date-fns';
 import {
   Tooltip,
   TooltipContent,
@@ -6,7 +8,6 @@ import {
 } from '@/src/components/ui/Tooltip';
 import { toast } from '@/src/hooks/useToast';
 import { copyToClipboard, truncateMiddle } from '@/src/lib/utils';
-import React, { useState } from 'react';
 import { HiCheck, HiDocumentDuplicate } from 'react-icons/hi2';
 import Jazzicon, { jsNumberForAddress } from 'react-jazzicon';
 
@@ -31,7 +32,8 @@ type AddressProps = {
   showCopy: boolean;
   replaceYou?: boolean;
   jazziconSize?: 'sm' | 'md' | 'lg' | 'none';
-  currentUser?: string; // nuevo parámetro opcional
+  currentUser?: string;
+  link?: string; // ✅ nuevo parámetro opcional
 };
 
 export const Address: React.FC<AddressProps> = ({
@@ -42,9 +44,9 @@ export const Address: React.FC<AddressProps> = ({
   replaceYou = true,
   jazziconSize = 'none',
   currentUser,
+  link,
 }) => {
   const [status, setStatus] = useState<'idle' | 'copied'>('idle');
-  const etherscanURL = `https://etherscan.io/address/${address}`;
 
   const isCurrentUser =
     replaceYou &&
@@ -54,6 +56,9 @@ export const Address: React.FC<AddressProps> = ({
   const linkContent = isCurrentUser
     ? 'you'
     : truncateMiddle(address, maxLength);
+
+  const defaultURL = `https://etherscan.io/address/${address}`;
+  const linkURL = link ?? defaultURL;
 
   const handleClick = () => {
     if (showCopy) {
@@ -81,7 +86,7 @@ export const Address: React.FC<AddressProps> = ({
             <TooltipTrigger asChild className="rounded-sm">
               {hasLink ? (
                 <a
-                  href={etherscanURL}
+                  href={linkURL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary-highlight underline transition-colors duration-200 hover:text-primary-highlight/80"

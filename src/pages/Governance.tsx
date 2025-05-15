@@ -11,47 +11,8 @@ import SortSelector from '@/src/components/ui/SortSelector';
 import ProposalCard from '@/src/components/governance/ProposalCard';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { cn } from '@/src/lib/utils';
-import { ethers } from 'ethers';
-import GovernorArtifact from '@/src/abis/MyGovernor.json';
-import { client } from '@/src/config/thirdwebClient';
-import { baseSepolia } from 'thirdweb/chains';
-import { ethers5Adapter } from 'thirdweb/adapters/ethers5';
-import { IProposalAction } from '../components/proposal/ProposalActions';
-
-export type ProposalStatus =
-  | 'ALL'
-  | 'Active'
-  | 'Pending'
-  | 'Succeeded'
-  | 'Executed'
-  | 'Defeated';
-
-export type Proposal = {
-  id: string;
-  status: ProposalStatus;
-  creatorAddress: string;
-  startDate: Date;
-  endDate: Date;
-  result: {
-    yes: bigint;
-    no: bigint;
-  };
-  totalVotingWeight: bigint;
-  metadata: {
-    title: string;
-    summary: string;
-  };
-  actions: IProposalAction[];
-};
-
-const tabs: ProposalStatus[] = [
-  'ALL',
-  'Active',
-  'Pending',
-  'Succeeded',
-  'Executed',
-  'Defeated',
-];
+import { Proposal, ProposalStatus } from '@/src/types/proposal';
+import { useAllProposals } from '@/src/hooks/useAllProposals';
 
 export const hardcodedProposalIds: { id: string; block: number }[] = [
   {
@@ -82,99 +43,25 @@ export const hardcodedProposalIds: { id: string; block: number }[] = [
     id: '20588325011978504911592413150860794060487008317810190675824731199459467179507',
     block: 25757584,
   },
+  {
+    id: '10684351425366435751996992516075295388903925133107568952668290889063512079337',
+    block: 25760526,
+  },
+];
+
+const tabs: ProposalStatus[] = [
+  'ALL',
+  'Active',
+  'Pending',
+  'Succeeded',
+  'Executed',
+  'Defeated',
 ];
 
 export default function Governance() {
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<ProposalStatus>('ALL');
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        setLoading(true);
-        const provider = ethers5Adapter.provider.toEthers({
-          client,
-          chain: baseSepolia,
-        });
-        const gov = new ethers.Contract(
-          import.meta.env.VITE_GOVERNOR_ADDRESS!,
-          GovernorArtifact.abi,
-          provider
-        );
-
-        const allProposals = await Promise.all(
-          hardcodedProposalIds.map(async ({ id, block }) => {
-            const [stateBN, snapshotBN, deadlineBN, votes] = await Promise.all([
-              gov.state(id),
-              gov.proposalSnapshot(id),
-              gov.proposalDeadline(id),
-              gov.proposalVotes(id),
-            ]);
-
-            const [against, forVotes, abstain] = votes.map((v: any) =>
-              BigInt(v.toString())
-            );
-            const totalVotes = against + forVotes + abstain;
-
-            const logs = await gov.queryFilter(
-              gov.filters.ProposalCreated(),
-              block,
-              block
-            );
-            const ev = logs.find((e) => e.args?.proposalId.toString() === id);
-
-            const description: string = ev?.args?.description ?? '';
-            const proposer: string = ev?.args?.proposer ?? '';
-            const [title, summary] = description.split('\n');
-
-            // Convertir deadlineBN a timestamp
-            const deadlineBlock = await provider.getBlock(
-              deadlineBN.toNumber()
-            );
-            const deadlineTimestamp = deadlineBlock?.timestamp;
-            const deadlineDate = deadlineTimestamp
-              ? new Date(deadlineTimestamp * 1000)
-              : new Date();
-
-            const snapshotBlock = await provider.getBlock(
-              snapshotBN.toNumber()
-            );
-            const startTimestamp = snapshotBlock?.timestamp;
-            const startDate = startTimestamp
-              ? new Date(startTimestamp * 1000)
-              : new Date();
-
-            return {
-              id,
-              status: interpretState(Number(stateBN)),
-              creatorAddress: proposer,
-              startDate,
-              endDate: deadlineDate,
-              result: {
-                yes: forVotes,
-                no: against,
-              },
-              totalVotingWeight: totalVotes,
-              metadata: {
-                title: title || 'Untitled Proposal',
-                summary: summary || '',
-              },
-            };
-          })
-        );
-
-        setProposals(allProposals);
-      } catch (err: any) {
-        setError(err.message || 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetch();
-  }, []);
+  const { proposals, loading, error } = useAllProposals();
 
   const filteredProposals =
     currentTab === 'ALL'
@@ -261,18 +148,4 @@ function ProposalCardList({
       ))}
     </div>
   );
-}
-
-function interpretState(n: number): ProposalStatus {
-  const states: ProposalStatus[] = [
-    'Pending',
-    'Active',
-    'Canceled',
-    'Defeated',
-    'Succeeded',
-    'Queued',
-    'Expired',
-    'Executed',
-  ];
-  return states[n] || 'Pending';
 }
