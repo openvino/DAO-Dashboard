@@ -1,3 +1,5 @@
+'use client';
+
 import { useToast } from '@/src/hooks/useToast';
 import {
   StepNavigator,
@@ -18,10 +20,9 @@ import { ethers } from 'ethers';
 import { ethers5Adapter } from 'thirdweb/adapters/ethers5';
 import { client } from '@/src/config/thirdwebClient';
 import { baseSepolia } from 'thirdweb/chains';
-
 import { useActiveAccount } from 'thirdweb/react';
 import { govAbi } from '@/src/abis/governor';
-import { DescriptionWithResources } from '@/src/utils/descriptionBuilder';
+import { OviTokenAbi } from '@/src/abis/ovi';
 
 export const Confirmation = () => {
   const { dataStep1, dataStep3 } = useNewProposalFormContext();
@@ -35,9 +36,7 @@ export const Confirmation = () => {
 
   const onSubmit = async () => {
     try {
-      if (!account?.address) {
-        throw new Error('You need to connect your wallet');
-      }
+      if (!account?.address) throw new Error('You need to connect your wallet');
 
       const signer = await ethers5Adapter.signer.toEthers({
         client,
@@ -51,42 +50,47 @@ export const Confirmation = () => {
         signer
       );
 
+      const actions = dataStep3?.actions || [];
       const targets: string[] = [];
-      const values: bigint[] = [];
+      const values: number[] = [];
       const calldatas: string[] = [];
 
-      const actions = dataStep3?.actions || [];
+      const iface = new ethers.utils.Interface(
+        OviTokenAbi.filter((item) => item.type !== 'error')
+      );
+
       for (const action of actions) {
         if (action.name === 'withdraw_assets') {
-          const iface = new ethers.utils.Interface([
-            'function withdraw(address to, uint256 amount, address tokenAddress)',
-          ]);
-          const calldata = iface.encodeFunctionData('withdraw', [
+          const calldata = iface.encodeFunctionData('transfer', [
             action.recipient,
-            action.amount,
-            action.tokenAddress,
+            ethers.utils.parseUnits(action.amount, 18),
           ]);
-          targets.push(import.meta.env.VITE_TIMELOCK_ADDRESS!);
-          values.push(0n);
+          targets.push(action.tokenAddress);
+          values.push(0);
           calldatas.push(calldata);
         }
-        if (action.name === 'mint_tokens') {
-          const iface = new ethers.utils.Interface([
-            'function mint((address to, uint256 amount, uint256 tokenId)[])',
-          ]);
-          const calldata = iface.encodeFunctionData('mint', [action.wallets]);
-          targets.push(import.meta.env.VITE_TIMELOCK_ADDRESS!);
-          values.push(0n);
+
+        if (action.name === 'split') {
+          const calldata = iface.encodeFunctionData('split', []);
+          targets.push(action.tokenAddress);
+          values.push(0);
           calldatas.push(calldata);
         }
       }
 
-      const rawDescription = DescriptionWithResources(dataStep1!);
+      // descripción sin HTML ni saltos de línea
+      const description =
+        (dataStep1?.title ?? 'Untitled') +
+        '\n\n' +
+        (dataStep1?.summary ?? '') +
+        '\n\n' +
+        (dataStep1?.description ?? '').replace(/<\/?[^>]+(>|$)/g, ''); // limpia HTML
+
       const tx = await governor.propose(
         targets,
         values,
         calldatas,
-        rawDescription
+        description
       );
       await tx.wait();
 
@@ -114,25 +118,19 @@ export const Confirmation = () => {
       switch (action.name) {
         case 'withdraw_assets':
           return {
-            method: 'withdraw',
-            interface: 'IWithdraw',
+            method: 'transfer',
+            interface: 'IERC20',
             params: {
               to: action.recipient,
               amount: action.amount,
               tokenAddress: action.tokenAddress,
             },
           };
-        case 'mint_tokens':
+        case 'split':
           return {
-            method: 'mint',
-            interface: 'IMint',
-            params: {
-              to: action.wallets.map((wallet) => ({
-                to: wallet.address,
-                amount: wallet.amount,
-                tokenId: 0,
-              })),
-            },
+            method: 'split',
+            interface: 'IOvi',
+            params: {},
           };
         default:
           return {
