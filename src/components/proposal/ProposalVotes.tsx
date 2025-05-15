@@ -44,58 +44,26 @@ const getCategories = (proposal: DetailedProposal | null): Category[] => {
       new Set<string>()
     )?.size ?? 0;
 
-  let start = 'Unknown';
-  let end = 'Unknown';
-
-  try {
-    start = proposal?.startDate
-      ? format(new Date(proposal.startDate), 'Pp')
-      : 'Unknown';
-    end = proposal?.endDate
-      ? format(new Date(proposal.endDate), 'Pp')
-      : 'Unknown';
-  } catch (e) {
-    console.warn('Invalid date in proposal', e);
-  }
+  const start = proposal?.startDate
+    ? format(new Date(proposal.startDate), 'Pp')
+    : 'Unknown';
+  const end = proposal?.endDate
+    ? format(new Date(proposal.endDate), 'Pp')
+    : 'Unknown';
 
   return [
     {
-      title: 'Decision rules',
-      items: [
-        {
-          label: 'Support threshold',
-          value: `${(proposal?.settings?.supportThreshold ?? 0) * 100}%`,
-        },
-        {
-          label: 'Minimum participation',
-          value: `${(proposal?.settings?.minParticipation ?? 0) * 100}%`,
-        },
-      ],
-    },
-    {
       title: 'Voting activity',
       items: [
-        {
-          label: 'Current participation',
-          value: `${currentParticipation}%`,
-        },
-        {
-          label: 'Unique voters',
-          value: uniqueVoters.toString(),
-        },
+        { label: 'Current participation', value: `${currentParticipation}%` },
+        { label: 'Unique voters', value: uniqueVoters.toString() },
       ],
     },
     {
       title: 'Voting period',
       items: [
-        {
-          label: 'Start',
-          value: start,
-        },
-        {
-          label: 'End',
-          value: end,
-        },
+        { label: 'Start', value: start },
+        { label: 'End', value: end },
       ],
     },
   ];
@@ -129,8 +97,6 @@ const ProposalVotes = ({
 
         const tx = await governor.castVote(proposal.id, support);
         await tx.wait();
-
-        console.log('✅ Voto emitido con éxito:', tx.hash);
         refetch();
       } catch (err) {
         console.error('❌ Error al votar:', err);
@@ -174,13 +140,13 @@ const ProposalVotes = ({
         </Dialog>
       }
     >
-      {proposal && <VotesContent proposal={proposal} refetch={refetch} />}
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button onClick={() => handleVote(1)} label="Vote YES" />
-        <Button onClick={() => handleVote(0)} label="Vote NO" />
-        <Button onClick={() => handleVote(2)} label="Abstain" />
-      </div>
+      {proposal && (
+        <VotesContent
+          proposal={proposal}
+          refetch={refetch}
+          onVote={handleVote}
+        />
+      )}
     </MainCard>
   );
 };
