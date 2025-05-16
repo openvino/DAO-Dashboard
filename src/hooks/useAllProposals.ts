@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ethers } from 'ethers';
 import GovernorArtifact from '@/src/abis/MyGovernor.json';
 import { client } from '@/src/config/thirdwebClient';
 import { baseSepolia } from 'thirdweb/chains';
 import { ethers5Adapter } from 'thirdweb/adapters/ethers5';
 import { Proposal, ProposalStatus } from '@/src/types/proposal';
-import { hardcodedProposalIds } from '@/src/pages/Governance';
 
 function interpretState(n: number): ProposalStatus {
   const states: ProposalStatus[] = [
@@ -25,9 +24,13 @@ export function useAllProposals() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const didRunRef = useRef(false);
 
   useEffect(() => {
-    const fetch = async () => {
+    if (didRunRef.current) return;
+    didRunRef.current = true;
+
+    const fetchProposals = async () => {
       try {
         setLoading(true);
 
@@ -35,14 +38,46 @@ export function useAllProposals() {
           client,
           chain: baseSepolia,
         });
+
         const gov = new ethers.Contract(
           import.meta.env.VITE_GOVERNOR_ADDRESS!,
           GovernorArtifact.abi,
           provider
         );
 
-        const allProposals = await Promise.all(
-          hardcodedProposalIds.map(async ({ id, block }) => {
+        const apiUrl = `${
+          import.meta.env.VITE_API_URL
+        }/api/routes/daoRoute`.replace(/([^:]\/)\/+/g, '$1');
+        const res = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Secret': import.meta.env.VITE_API_SECRET!,
+          },
+        });
+
+        if (!res.ok) throw new Error('Failed to fetch proposals from API');
+
+        const rawProposals: { id: string; block: number }[] = await res.json();
+
+        // ⏱️ Estimar secondsPerBlock
+        const latest = await provider.getBlock('latest');
+        await new Promise((r) => setTimeout(r, 3000));
+        const latest2 = await provider.getBlock('latest');
+
+        let secondsPerBlock = 12;
+        if (latest2.number > latest.number) {
+          secondsPerBlock =
+            (latest2.timestamp - latest.timestamp) /
+            (latest2.number - latest.number);
+        }
+
+        const allProposals: Proposal[] = [];
+
+        for (const { id, block } of rawProposals) {
+          const blockNumber = Number(block);
+
+          try {
             const [stateBN, snapshotBN, deadlineBN, votes] = await Promise.all([
               gov.state(id),
               gov.proposalSnapshot(id),
@@ -57,8 +92,8 @@ export function useAllProposals() {
 
             const logs = await gov.queryFilter(
               gov.filters.ProposalCreated(),
-              block,
-              block
+              blockNumber,
+              blockNumber
             );
 
             const ev = logs.find((e) => e.args?.proposalId.toString() === id);
@@ -66,26 +101,25 @@ export function useAllProposals() {
             const proposer: string = ev?.args?.proposer ?? '';
             const [title, summary] = description.split('\n');
 
-            const deadlineBlock = await provider.getBlock(
-              deadlineBN.toNumber()
-            );
-            const deadlineDate = deadlineBlock
-              ? new Date(deadlineBlock.timestamp * 1000)
-              : new Date();
+            const creationBlock = await provider.getBlock(blockNumber);
 
-            const snapshotBlock = await provider.getBlock(
-              snapshotBN.toNumber()
-            );
-            const startDate = snapshotBlock
-              ? new Date(snapshotBlock.timestamp * 1000)
-              : new Date();
+            const estimateDateFromBlock = (targetBlock: number): Date => {
+              if (!creationBlock) return new Date();
+              return new Date(
+                creationBlock.timestamp * 1000 +
+                  (targetBlock - creationBlock.number) * secondsPerBlock * 1000
+              );
+            };
 
-            return {
+            const startDate = estimateDateFromBlock(snapshotBN.toNumber());
+            const endDate = estimateDateFromBlock(deadlineBN.toNumber());
+
+            allProposals.push({
               id,
               status: interpretState(Number(stateBN)),
               creatorAddress: proposer,
               startDate,
-              endDate: deadlineDate,
+              endDate,
               result: {
                 yes: forVotes,
                 no: against,
@@ -96,19 +130,24 @@ export function useAllProposals() {
                 summary: summary || '',
               },
               actions: [],
-            };
-          })
-        );
+            });
+
+            await new Promise((r) => setTimeout(r, 250));
+          } catch (innerErr) {
+            console.warn(`⚠️ Skipping proposal ${id} due to error:`, innerErr);
+          }
+        }
 
         setProposals(allProposals);
       } catch (err: any) {
+        console.error('❌ Error fetching all proposals:', err);
         setError(err.message || 'Unknown error');
       } finally {
         setLoading(false);
       }
     };
 
-    fetch();
+    fetchProposals();
   }, []);
 
   return { proposals, loading, error };

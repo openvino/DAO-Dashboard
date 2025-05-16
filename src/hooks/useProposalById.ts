@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ethers } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
 import { Interface } from 'ethers/lib/utils';
 import { baseSepolia } from 'thirdweb/chains';
 import { ethers5Adapter } from 'thirdweb/adapters/ethers5';
@@ -23,18 +23,57 @@ function interpretState(n: number): Proposal['status'] {
   return states[n] || 'Pending';
 }
 
-export function useProposalById(id: string, blockNumber: number) {
+export function useProposalById(id: string) {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id || !blockNumber) return;
+    if (!id) return;
 
-    const fetch = async () => {
+    let cancelled = false;
+
+    const fetchProposal = async () => {
       try {
         setLoading(true);
 
+        const apiUrl = `${
+          import.meta.env.VITE_API_URL
+        }/api/routes/daoRoute`.replace(/([^:]\/)\/+/g, '$1');
+        const secret = import.meta.env.VITE_API_SECRET;
+
+        if (!apiUrl || !secret) {
+          throw new Error('Missing VITE_API_URL or VITE_API_SECRET');
+        }
+
+        let res: Response;
+        try {
+          res = await fetch(apiUrl, {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Secret': secret,
+            },
+          });
+        } catch (err) {
+          throw new Error(`Fetch failed: ${err}`);
+        }
+
+        if (!res || typeof res.ok === 'undefined') {
+          throw new Error('No response received from backend');
+        }
+
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          throw new Error(
+            `Backend error: ${res.status} ${res.statusText}\n${body}`
+          );
+        }
+
+        const proposals: { id: string; block: number }[] = await res.json();
+        const proposalInfo = proposals.find((p) => p.id === id);
+        if (!proposalInfo) throw new Error('Proposal not found');
+
+        const blockNumber = Number(proposalInfo.block);
         const provider = ethers5Adapter.provider.toEthers({
           client,
           chain: baseSepolia,
@@ -46,19 +85,6 @@ export function useProposalById(id: string, blockNumber: number) {
           provider
         );
 
-        // Medición del tiempo entre bloques
-        let secondsPerBlock = 13;
-        try {
-          const blockA = await provider.getBlock('latest');
-          await new Promise((r) => setTimeout(r, 3000));
-          const blockB = await provider.getBlock('latest');
-          if (blockB.number > blockA.number) {
-            secondsPerBlock =
-              (blockB.timestamp - blockA.timestamp) /
-              (blockB.number - blockA.number);
-          }
-        } catch {}
-
         const logs = await provider.getLogs({
           address: governor.address,
           fromBlock: blockNumber,
@@ -66,7 +92,7 @@ export function useProposalById(id: string, blockNumber: number) {
           topics: [governor.interface.getEventTopic('ProposalCreated')],
         });
 
-        const parsedLogs = logs
+        const ev = logs
           .map((log) => {
             try {
               return governor.interface.parseLog(log);
@@ -74,11 +100,8 @@ export function useProposalById(id: string, blockNumber: number) {
               return null;
             }
           })
-          .filter(Boolean);
+          .find((log) => log?.args?.proposalId.toString() === id);
 
-        const ev = parsedLogs.find(
-          (log) => log?.args?.proposalId.toString() === id
-        );
         if (!ev) throw new Error('ProposalCreated event not found');
 
         const creationBlock = await provider.getBlock(blockNumber);
@@ -96,28 +119,19 @@ export function useProposalById(id: string, blockNumber: number) {
         );
         const totalVotes = against + forVotes + abstain;
 
-        const getDateFromBlock = async (blockNum: number): Promise<Date> => {
-          const block = await provider.getBlock(blockNum);
-          return block
-            ? new Date(block.timestamp * 1000)
-            : new Date(
-                creationBlock.timestamp * 1000 +
-                  (blockNum - creationBlock.number) * secondsPerBlock * 1000
-              );
-        };
+        const startBlock = await provider.getBlock(snapshotBN.toNumber());
+        const endBlock = await provider.getBlock(deadlineBN.toNumber());
 
-        const startDate = await getDateFromBlock(Number(snapshotBN));
-        const endDate = await getDateFromBlock(Number(deadlineBN));
-
-        const args = ev.args;
-        console.log('args', args);
+        const startDate = startBlock
+          ? new Date(startBlock.timestamp * 1000)
+          : creationDate;
+        const endDate = endBlock
+          ? new Date(endBlock.timestamp * 1000)
+          : creationDate;
 
         const targets = ev.args[2] as string[];
-        const valuesBN = ev.args[3] as ethers.BigNumber[];
-        const signatures = ev.args[4] as string[];
+        const valuesBN = ev.args[3] as BigNumber[];
         const calldatas = ev.args[5] as string[];
-        const voteStart = ev.args[6] as ethers.BigNumber;
-        const voteEnd = ev.args[7] as ethers.BigNumber;
         const descriptionRaw = ev.args[8] as string;
         const proposer = ev.args[1] as string;
 
@@ -130,17 +144,6 @@ export function useProposalById(id: string, blockNumber: number) {
           const target = targets[i];
           const value = valuesBN[i]?.toString() ?? '0';
           const contractInfo = knownContracts[target?.toLowerCase()];
-          console.log(
-            'descriptionRaw',
-            descriptionRaw,
-            'targets',
-            targets,
-            'valuesBN',
-            valuesBN,
-            'calldatas',
-            calldatas
-          );
-
           if (!contractInfo) {
             return {
               interface: 'unknown',
@@ -176,23 +179,11 @@ export function useProposalById(id: string, blockNumber: number) {
           }
         });
 
-        const voteLogs: ethers.EventLog[] = [];
-        const chunkSize = 1000;
-        for (
-          let from = snapshotBN.toNumber();
-          from <= deadlineBN.toNumber();
-          from += chunkSize
-        ) {
-          const to = Math.min(from + chunkSize - 1, deadlineBN.toNumber());
-          try {
-            const chunkLogs = await governor.queryFilter(
-              governor.filters.VoteCast(),
-              from,
-              to
-            );
-            voteLogs.push(...chunkLogs);
-          } catch {}
-        }
+        const voteLogs = await governor.queryFilter(
+          governor.filters.VoteCast(),
+          snapshotBN.toNumber(),
+          deadlineBN.toNumber()
+        );
 
         const votesDetailed = voteLogs.map((log) => {
           const { voter, support, weight } = log.args;
@@ -243,17 +234,26 @@ export function useProposalById(id: string, blockNumber: number) {
           calldatas,
         };
 
-        setProposal(fullProposal);
+        if (!cancelled) {
+          setProposal(fullProposal);
+        }
       } catch (err: any) {
-        setError(err.message || 'Unknown error');
-        setProposal(null);
+        console.error('Error loading proposal', err);
+        if (!cancelled) {
+          setError(err.message || 'Unknown error');
+          setProposal(null);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    fetch();
-  }, [id, blockNumber]);
+    fetchProposal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   return { proposal, loading, error };
 }

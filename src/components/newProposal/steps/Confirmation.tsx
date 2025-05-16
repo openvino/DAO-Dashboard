@@ -52,7 +52,7 @@ export const Confirmation = () => {
 
       const actions = dataStep3?.actions || [];
       const targets: string[] = [];
-      const values: number[] = [];
+      const values: ethers.BigNumber[] = [];
       const calldatas: string[] = [];
 
       const iface = new ethers.utils.Interface(
@@ -60,43 +60,80 @@ export const Confirmation = () => {
       );
 
       for (const action of actions) {
+        console.log(action.name);
+
         if (action.name === 'withdraw_assets') {
-          const calldata = iface.encodeFunctionData('transfer', [
-            action.recipient,
-            ethers.utils.parseUnits(action.amount, 18),
-          ]);
-          targets.push(action.tokenAddress);
-          values.push(0);
-          calldatas.push(calldata);
+          if (action.tokenAddress === 'native') {
+            // ETH transfer
+            targets.push(action.recipient);
+            values.push(ethers.utils.parseEther(action.amount));
+            calldatas.push('0x');
+          } else {
+            // ERC20 transfer
+            const calldata = iface.encodeFunctionData('transfer', [
+              action.recipient,
+              ethers.utils.parseUnits(action.amount, 18),
+            ]);
+            targets.push(action.tokenAddress);
+            values.push(ethers.constants.Zero);
+            calldatas.push(calldata);
+          }
         }
 
         if (action.name === 'split') {
           const calldata = iface.encodeFunctionData('split', []);
           targets.push(action.tokenAddress);
-          values.push(0);
+          values.push(ethers.constants.Zero);
           calldatas.push(calldata);
         }
       }
 
-      // descripción sin HTML ni saltos de línea
       const description =
         (dataStep1?.title ?? 'Untitled') +
         '\n\n' +
         (dataStep1?.summary ?? '') +
         '\n\n' +
-        (dataStep1?.description ?? '').replace(/<\/?[^>]+(>|$)/g, ''); // limpia HTML
-
+        (dataStep1?.description ?? '').replace(/<\/?[^>]+(>|$)/g, '');
+      console.log({
+        targets,
+        values,
+        calldatas,
+        description,
+      });
       const tx = await governor.propose(
         targets,
         values,
         calldatas,
         description
       );
-      await tx.wait();
+      const receipt = await tx.wait();
+
+      const event = receipt.events?.find((e) => e.event === 'ProposalCreated');
+      if (!event) throw new Error('ProposalCreated event not found');
+
+      const proposalId = event.args?.proposalId?.toString();
+      const blockNumber = receipt.blockNumber;
+
+      const apiUrl = `${
+        import.meta.env.VITE_API_URL
+      }/api/routes/daoRoute`.replace(/([^:]\/)\/+/g, '$1');
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Secret': import.meta.env.VITE_API_SECRET!,
+        },
+        body: JSON.stringify({ id: proposalId, block: blockNumber }),
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`Failed to save proposal to backend:\n${body}`);
+      }
 
       toast({
         title: 'Proposal submitted',
-        description: 'Successfully created proposal on-chain',
+        description: 'Successfully created proposal on-chain and stored in DB',
         variant: 'success',
       });
     } catch (err: any) {
@@ -119,7 +156,7 @@ export const Confirmation = () => {
         case 'withdraw_assets':
           return {
             method: 'transfer',
-            interface: 'IERC20',
+            interface: action.tokenAddress === 'native' ? 'INative' : 'IERC20',
             params: {
               to: action.recipient,
               amount: action.amount,

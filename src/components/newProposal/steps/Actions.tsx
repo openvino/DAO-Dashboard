@@ -33,14 +33,22 @@ import {
   DropdownMenuItem,
 } from '@/src/components/ui/Dropdown';
 import { Button } from '@/src/components/ui/Button';
-import { HiBanknotes, HiCircleStack, HiCog, HiPlus } from 'react-icons/hi2';
+import {
+  HiBanknotes,
+  HiCircleStack,
+  HiCog,
+  HiPlus,
+  HiScissors,
+} from 'react-icons/hi2';
+
 import { Label } from '@/src/components/ui/Label';
 import { FaGithub } from 'react-icons/fa';
+
 import {
-  ChangeParametersInput,
-  emptyChangeParameter,
-  ProposalFormChangeParameter,
-} from '../actions/ChangeParametersInput';
+  ProposalFormSplitData,
+  emptySplitData,
+  SplitInput,
+} from '@/src/components/newProposal/actions/SplitInput';
 
 export interface ProposalFormActions {
   actions: ProposalFormAction[];
@@ -50,7 +58,8 @@ export type ProposalFormAction =
   | ProposalFormWithdrawData
   | ProposalFormMintData
   | ProposalFormMergeData
-  | ProposalFormChangeParameter;
+  | ProposalFormChangeParameter
+  | ProposalFormSplitData;
 
 export const Actions = () => {
   const { setStep, dataStep3, setDataStep3 } = useNewProposalFormContext();
@@ -89,67 +98,65 @@ export const Actions = () => {
           {fields.length === 0 ? (
             <p className="italic text-highlight-foreground/80">No actions</p>
           ) : (
-            <>
-              {/* List of proposal actions */}
-              <div className="flex flex-col gap-6">
-                {fields.map((field: Record<'id', string>, index: number) => {
-                  const prefix: `actions.${number}` = `actions.${index}`;
-                  const action: ProposalFormAction = getValues(prefix);
+            <div className="flex flex-col gap-6">
+              {fields.map((field: Record<'id', string>, index: number) => {
+                const prefix: `actions.${number}` = `actions.${index}`;
+                const action: ProposalFormAction = getValues(prefix);
 
-                  switch (action.name) {
-                    case 'withdraw_assets':
-                      return (
-                        <WithdrawAssetsInput
-                          register={register}
-                          prefix={prefix}
-                          key={field.id}
-                          errors={
-                            errors.actions ? errors.actions[index] : undefined
-                          }
-                          onRemove={() => remove(index)}
-                          control={control}
-                        />
-                      );
-                    case 'mint_tokens':
-                      return (
-                        <MintTokensInput
-                          register={register}
-                          control={control}
-                          prefix={prefix}
-                          key={field.id}
-                          errors={
-                            errors.actions ? errors.actions[index] : undefined
-                          }
-                          onRemove={() => remove(index)}
-                          getValues={getValues}
-                        />
-                      );
-                    case 'merge_pr':
-                      return (
-                        <MergePRInput
-                          register={register}
-                          prefix={prefix}
-                          key={field.id}
-                          errors={
-                            errors.actions ? errors.actions[index] : undefined
-                          }
-                          onRemove={() => remove(index)}
-                        />
-                      );
-                    case 'change_parameter':
-                      return (
-                        <ChangeParametersInput
-                          control={control}
-                          register={register}
-                          errors={errors?.actions?.[index]}
-                          prefix={prefix}
-                          onRemove={() => remove(index)}
-                        />
-                      );
-                  }
-                })}
-              </div>
-            </>
+                switch (action.name) {
+                  case 'withdraw_assets':
+                    return (
+                      <WithdrawAssetsInput
+                        register={register}
+                        prefix={prefix}
+                        key={field.id}
+                        errors={errors.actions?.[index]}
+                        onRemove={() => remove(index)}
+                        control={control}
+                      />
+                    );
+                  case 'mint_tokens':
+                    return (
+                      <MintTokensInput
+                        register={register}
+                        control={control}
+                        prefix={prefix}
+                        key={field.id}
+                        errors={errors.actions?.[index]}
+                        onRemove={() => remove(index)}
+                        getValues={getValues}
+                      />
+                    );
+                  case 'merge_pr':
+                    return (
+                      <MergePRInput
+                        register={register}
+                        prefix={prefix}
+                        key={field.id}
+                        errors={errors.actions?.[index]}
+                        onRemove={() => remove(index)}
+                      />
+                    );
+                  case 'change_parameter':
+                    return (
+                      <ChangeParametersInput
+                        control={control}
+                        register={register}
+                        errors={errors?.actions?.[index]}
+                        prefix={prefix}
+                        onRemove={() => remove(index)}
+                      />
+                    );
+                  case 'split':
+                    return (
+                      <SplitInput
+                        key={field.id}
+                        onRemove={() => remove(index)}
+                      />
+                    );
+                }
+              })}
+            </div>
           )}
         </div>
         <AddActionButton append={append} actions={getValues()} />
@@ -167,7 +174,6 @@ export const AddActionButton = ({
   append,
   actions,
 }: {
-  // eslint-disable-next-line no-unused-vars
   append: (fn: ProposalFormAction) => void;
   actions: ProposalFormActions;
 }) => {
@@ -183,31 +189,14 @@ export const AddActionButton = ({
             className="gap-x-2 hover:cursor-pointer"
           >
             <HiBanknotes className="h-5 w-5 shrink-0" />
-            <span>Withdraw assets</span>
+            <span>Budget Approval</span>
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => append(emptyMintData)}
-            className="gap-x-2 hover:cursor-pointer"
-            disabled={
-              actions?.actions?.some((x) => x.name == 'mint_tokens') ?? false
-            }
-          >
-            <HiCircleStack className="h-5 w-5 shrink-0" />
-            <span>Mint tokens</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => append(emptyMergeData)}
+            onClick={() => append(emptySplitData)}
             className="gap-x-2 hover:cursor-pointer"
           >
-            <FaGithub className="h-5 w-5 shrink-0" />
-            <span>Merge pull request</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => append(emptyChangeParameter)}
-            className="gap-x-2 hover:cursor-pointer"
-          >
-            <HiCog className="h-5 w-5 shrink-0" />
-            <span>Change plugin parameter</span>
+            <HiScissors className="h-5 w-5 shrink-0" />
+            <span>Split OVI tokens</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

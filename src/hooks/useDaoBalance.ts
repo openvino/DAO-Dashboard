@@ -86,19 +86,19 @@ export const useDaoBalance = ({
         });
         const timelockAddress = import.meta.env.VITE_TIMELOCK_ADDRESS;
 
-        // Obtener balance de ETH
-        // const nativeBalanceRaw = await provider.getBalance(timelockAddress);
-        // const nativeBalance: DaoBalance = {
-        //   type: 'NATIVE',
-        //   balance: BigInt(nativeBalanceRaw.toString()),
-        //   decimals: 18,
-        //   address: timelockAddress,
-        //   name: 'Ether',
-        //   symbol: 'ETH',
-        //   updateDate: now,
-        // };
+        // ✅ Balance NATIVE (ETH)
+        const nativeBalanceRaw = await provider.getBalance(timelockAddress);
+        const nativeBalance: DaoBalance = {
+          type: 'NATIVE',
+          balance: BigInt(nativeBalanceRaw.toString()),
+          decimals: 18,
+          address: timelockAddress,
+          name: 'Ether',
+          symbol: 'ETH',
+          updateDate: now,
+        };
 
-        // Obtener balances de tokens ERC20
+        // ✅ ERC20 balances
         const tokenBalances: DaoBalance[] = await Promise.all(
           TOKENS.map(async (token) => {
             const contract = new ethers.Contract(
@@ -119,10 +119,7 @@ export const useDaoBalance = ({
           })
         );
 
-        setDaoBalances([
-          // nativeBalance,
-          ...tokenBalances,
-        ]);
+        setDaoBalances([nativeBalance, ...tokenBalances]);
         setError(null);
       } catch (err: any) {
         setError(err.message ?? 'Unknown error');

@@ -2,6 +2,7 @@ import {
   HiArrowSmallRight,
   HiArrowsRightLeft,
   HiCircleStack,
+  HiHome,
 } from 'react-icons/hi2';
 import { Address, AddressLength } from '@/src/components/ui/Address';
 import { Button } from '@/src/components/ui/Button';
@@ -169,12 +170,25 @@ const Finance = () => {
   } = useDaoTransfers({});
   const [transferLimit, setTransferLimit] = useState(3);
 
+  const treasuryAddress = import.meta.env.VITE_TIMELOCK_ADDRESS;
+
   return (
     <div className="space-y-6">
       <HeaderCard
-        title="Finance"
-        aside={<Link to="/governance/new-proposal" label="New transfer" />}
-      />
+        title="Treasury"
+        icon={HiHome}
+        description="Treasury address (timelock contract)"
+        aside={<Link to="/governance/new-proposal" label="New proposal" />}
+      >
+        <Address
+          address={treasuryAddress}
+          maxLength={AddressLength.Medium}
+          hasLink
+          showCopy
+          link={`https://sepolia.basescan.org/address/${treasuryAddress}`}
+        />
+      </HeaderCard>
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <MainCard
           header={

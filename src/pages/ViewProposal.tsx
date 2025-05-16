@@ -27,10 +27,7 @@ const ViewProposal: React.FC = () => {
   const account = useActiveAccount();
   const userAddress = account?.address;
 
-  const proposalInfo = hardcodedProposalIds.find((p) => p.id === id);
-  const blockNumber = proposalInfo?.block ?? 0;
-
-  const { proposal, loading, error } = useProposalById(id || '', blockNumber);
+  const { proposal, loading, error } = useProposalById(id || '');
 
   if (loading) {
     return (
@@ -139,6 +136,13 @@ const ViewProposal: React.FC = () => {
         console.log('📥 Proposal queued:', tx.hash);
         await tx.wait();
       } else if (canExecute) {
+        console.log({
+          targets,
+          parsedValues,
+          calldatas,
+          descriptionHash,
+        });
+
         tx = await governor.execute(
           targets,
           parsedValues,

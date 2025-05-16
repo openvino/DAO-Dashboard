@@ -20,17 +20,18 @@ import { useAllProposals } from '../hooks/useAllProposals';
 import { useDaoTransfers } from '@/src/hooks/useDaoTransfers';
 import TokenAmount from '@/src/components/ui/TokenAmount';
 import { Address, AddressLength } from '@/src/components/ui/Address';
+import { useProposalCountFromApi } from '@/src/hooks/useProposalCountFromApi'; // ✅ nuevo
 
 const Dashboard = () => {
   const dao = {
-    name: 'Openvino DAO',
+    name: 'OpenVinoDAO',
     ensDomain: 'openvino.eth',
-    description: 'Tokenization, traceability, transparency.',
+    description: 'Tokenization - Traceability - Transparency.',
     creationDate: new Date(),
     address: import.meta.env.VITE_TIMELOCK_ADDRESS,
     links: [
-      { name: 'Openvino', url: 'https://openvino.org/' },
-      { name: 'Openvino Exchange', url: 'https://openvino.exchange.org/' },
+      { name: 'OpenVino', url: 'https://openvino.org/' },
+      { name: 'OpenVino Exchange', url: 'https://openvino.exchange.org/' },
     ],
   };
 
@@ -39,11 +40,18 @@ const Dashboard = () => {
     loading: loadingProposals,
     error: errorProposals,
   } = useAllProposals();
+
   const {
     daoTransfers,
     loading: loadingTransfers,
     error: errorTransfers,
   } = useDaoTransfers();
+
+  const {
+    count: proposalCount,
+    loading: loadingCount,
+    error: errorCount,
+  } = useProposalCountFromApi();
 
   const members = [
     { address: '0x87495d92Ad7655BF8bcC6447ea715498238517aF', weight: 100n },
@@ -77,7 +85,7 @@ const Dashboard = () => {
         icon={HiInboxStack}
         header={
           <DefaultMainCardHeader
-            value={proposals.length}
+            value={loadingCount ? '...' : errorCount ? '!' : proposalCount ?? 0}
             label="proposals created"
           />
         }

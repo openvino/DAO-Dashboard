@@ -33,6 +33,14 @@ export const OviTokenAbi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'split',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+
+  {
     type: 'error',
     name: 'Error',
     inputs: [{ name: 'message', type: 'string' }],
