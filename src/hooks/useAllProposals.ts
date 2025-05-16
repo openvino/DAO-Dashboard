@@ -60,7 +60,6 @@ export function useAllProposals() {
 
         const rawProposals: { id: string; block: number }[] = await res.json();
 
-        // ⏱️ Estimar secondsPerBlock
         const latest = await provider.getBlock('latest');
         await new Promise((r) => setTimeout(r, 3000));
         const latest2 = await provider.getBlock('latest');
@@ -111,25 +110,22 @@ export function useAllProposals() {
               );
             };
 
-            const startDate = estimateDateFromBlock(snapshotBN.toNumber());
-            const endDate = estimateDateFromBlock(deadlineBN.toNumber());
-
             allProposals.push({
               id,
+              title: title || 'Untitled Proposal',
+              description,
+              proposer,
+              startBlock: snapshotBN.toNumber(),
+              endBlock: deadlineBN.toNumber(),
               status: interpretState(Number(stateBN)),
-              creatorAddress: proposer,
-              startDate,
-              endDate,
-              result: {
-                yes: forVotes,
-                no: against,
-              },
+              forVotes,
+              againstVotes: against,
+              abstainVotes: abstain,
               totalVotingWeight: totalVotes,
-              metadata: {
-                title: title || 'Untitled Proposal',
-                summary: summary || '',
-              },
-              actions: [],
+              rawDescription: description,
+              targets: [],
+              values: [],
+              calldatas: [],
             });
 
             await new Promise((r) => setTimeout(r, 250));

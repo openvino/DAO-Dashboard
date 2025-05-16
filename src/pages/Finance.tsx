@@ -167,7 +167,7 @@ const Finance = () => {
     daoTransfers,
     loading: transfersLoading,
     error: transfersError,
-  } = useDaoTransfers({});
+  } = useDaoTransfers();
   const [transferLimit, setTransferLimit] = useState(3);
 
   const treasuryAddress = import.meta.env.VITE_TIMELOCK_ADDRESS;

@@ -151,7 +151,9 @@ const Verification = () => {
             {availableStamps.map((stampInfo) => (
               <StampCard
                 key={stampInfo.id}
-                stampInfo={stampInfo}
+                displayName={stampInfo.displayName}
+                url={stampInfo.url}
+                icon={stampInfo.icon}
                 stamp={stamps.find(([id]) => id === stampInfo.id) || null}
                 thresholdHistory={thresholdHistory}
                 verify={() => alert('Mock verify')}

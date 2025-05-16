@@ -14,7 +14,6 @@ import {
 import CategoryList, { Category } from '@/src/components/ui/CategoryList';
 import { truncateMiddle } from '@/src/lib/utils';
 
-// Tipos mock si eliminaste los originales
 type PendingVerification = {
   addressToVerify: string;
   hash: string;
@@ -30,13 +29,24 @@ type StampInfo = {
   icon: React.ReactNode;
 };
 
-// Dummy lista de stamps, opcionalmente podés eliminarla
+type PendingVerificationCardProps = {
+  verification: PendingVerification;
+  refetch?: any;
+  pendingVerifications?: PendingVerification[];
+  setPendingVerifications?: (
+    value:
+      | PendingVerification[]
+      | ((val: PendingVerification[]) => PendingVerification[])
+  ) => void;
+};
+
 const availableStamps: StampInfo[] = [];
 
-const PendingVerificationCard = ({
+const PendingVerificationCard: React.FC<PendingVerificationCardProps> = ({
   verification,
-}: {
-  verification: PendingVerification;
+  refetch,
+  pendingVerifications,
+  setPendingVerifications,
 }) => {
   const fallBackStampInfo: StampInfo = {
     id: 'unknown',

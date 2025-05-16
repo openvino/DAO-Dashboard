@@ -1,8 +1,3 @@
-/**
- * The HeaderCard module provides a pre-styled card component with a header and optional aside content.
- * It extends the base Card component with additional layout and styling.
- */
-
 import React, { ReactNode } from 'react';
 import { VariantProps, cva } from 'class-variance-authority';
 
@@ -15,26 +10,20 @@ const headerCardVariants = cva('w-full h-full flex flex-col gap-y-2', {
   defaultVariants: {},
 });
 
-/**
- * HeaderCardProps interface represents the props for the HeaderCard component.
- * @extends CardProps - Extends the CardProps from the base Card component.
- * @extends VariantProps<typeof headerCardVariants> - Extends the VariantProps from class-variance-authority.
- */
 export interface HeaderCardProps
   extends CardProps,
     VariantProps<typeof headerCardVariants> {
   title: string;
+  description?: string;
+  icon?: React.ElementType;
   aside?: ReactNode;
 }
 
-/**
- * The HeaderCard component is a pre-styled card component with a header and optional aside content.
- * It extends the base Card component with additional layout and styling.
- * @param props - Props for the HeaderCard component.
- * @returns A HeaderCard React element.
- */
 const HeaderCard = React.forwardRef<HTMLDivElement, HeaderCardProps>(
-  ({ className, title, aside = '', ...props }, ref) => {
+  (
+    { className, title, description, icon: Icon, aside = '', ...props },
+    ref
+  ) => {
     return (
       <Card
         ref={ref}
@@ -47,7 +36,15 @@ const HeaderCard = React.forwardRef<HTMLDivElement, HeaderCardProps>(
         {...props}
       >
         <div className="space-y-6">
-          <Header>{title}</Header>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}
+              <Header>{title}</Header>
+            </div>
+            {description && (
+              <p className="text-sm text-muted-foreground">{description}</p>
+            )}
+          </div>
           {props.children}
         </div>
         <>{aside}</>
@@ -55,6 +52,6 @@ const HeaderCard = React.forwardRef<HTMLDivElement, HeaderCardProps>(
     );
   }
 );
-HeaderCard.displayName = 'Card';
+HeaderCard.displayName = 'HeaderCard';
 
 export { HeaderCard, headerCardVariants };

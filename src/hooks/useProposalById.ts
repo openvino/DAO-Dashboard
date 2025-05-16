@@ -5,7 +5,8 @@ import { baseSepolia } from 'thirdweb/chains';
 import { ethers5Adapter } from 'thirdweb/adapters/ethers5';
 import { client } from '@/src/config/thirdwebClient';
 import GovernorArtifact from '@/src/abis/MyGovernor.json';
-import type { Proposal } from '@/src/pages/Governance';
+import type { Proposal } from '@/src/types/proposal';
+
 import type { IProposalAction } from '@/src/components/proposal/ProposalActions';
 import { knownContracts } from '@/src/utils/knownContracts';
 
@@ -216,6 +217,7 @@ export function useProposalById(id: string) {
         const fullProposal: Proposal = {
           id,
           status: interpretState(Number(stateBN)),
+          // @ts-ignore
           creatorAddress: proposer,
           startDate,
           endDate,

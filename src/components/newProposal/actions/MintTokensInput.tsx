@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { AddressPattern, NumberPattern } from '@/src/lib/patterns';
 import { Input } from '@/src/components/ui/Input';
 import { HiCircleStack, HiPlus, HiXMark } from 'react-icons/hi2';

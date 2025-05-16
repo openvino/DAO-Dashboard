@@ -11,7 +11,6 @@ import ProposalHistory from '@/src/components/proposal/ProposalHistory';
 import ConnectWalletWarning from '@/src/components/ui/ConnectWalletWarning';
 import { countdownText } from '@/src/lib/utils';
 import { useProposalById } from '@/src/hooks/useProposalById';
-import { hardcodedProposalIds } from './Governance';
 import { useActiveAccount } from 'thirdweb/react';
 import { ethers } from 'ethers';
 import { govAbi } from '@/src/abis/governor';
@@ -60,19 +59,32 @@ const ViewProposal: React.FC = () => {
   }
 
   const {
-    metadata: { title, summary },
-    creatorAddress,
+    title,
+    description,
+    proposer,
     status,
-    startDate,
-    endDate,
-    executionDate,
-    result,
+    startBlock,
+    endBlock,
+    forVotes,
+    againstVotes,
+    abstainVotes,
     totalVotingWeight,
     rawDescription,
     targets,
     values,
     calldatas,
   } = proposal;
+
+  const result = {
+    yes: forVotes,
+    no: againstVotes,
+  };
+
+  const now = Date.now();
+  const secondsPerBlock = 12;
+  const startDate = new Date(now - 10 * secondsPerBlock * 1000);
+  const endDate = new Date(now + 60 * secondsPerBlock * 1000);
+  const executionDate = null;
 
   const statusText = () => {
     switch (status) {
@@ -93,7 +105,6 @@ const ViewProposal: React.FC = () => {
         return 'Ended ' + countdownText(endDate) + ' ago';
     }
   };
-  console.log('STATUS', status);
 
   const canQueue = status === 'Succeeded';
   const canExecute = status === 'Queued';
@@ -118,7 +129,7 @@ const ViewProposal: React.FC = () => {
         try {
           return ethers.BigNumber.from(v);
         } catch (err) {
-          console.error(`❌ Valor inválido en values[${i}]:`, v);
+          console.error(`Valor inválido en values[${i}]:`, v);
           throw new Error(`Invalid value at index ${i}`);
         }
       });
@@ -133,24 +144,15 @@ const ViewProposal: React.FC = () => {
           calldatas,
           descriptionHash
         );
-        console.log('📥 Proposal queued:', tx.hash);
+        console.log('Proposal queued:', tx.hash);
         await tx.wait();
       } else if (canExecute) {
-        console.log({
-          targets,
-          parsedValues,
-          calldatas,
-          descriptionHash,
-        });
-
         tx = await governor.execute(
           targets,
           parsedValues,
           calldatas,
           descriptionHash,
-          {
-            gasLimit: 800_000,
-          }
+          { gasLimit: 800_000 }
         );
         console.log('✅ Proposal executed:', tx.hash);
         await tx.wait();
@@ -186,7 +188,7 @@ const ViewProposal: React.FC = () => {
           title={title}
           aside={
             <div className="flex flex-row-reverse items-center justify-between gap-y-4 sm:flex-col sm:items-end">
-              <ProposalStatusBadge size="md" status={status} />
+              <ProposalStatusBadge status={status} />
               <div className="flex flex-row items-center gap-x-2 text-highlight-foreground/60">
                 <HiOutlineClock className="h-5 w-5 shrink-0" />
                 {statusText()}
@@ -196,12 +198,12 @@ const ViewProposal: React.FC = () => {
         >
           <div className="flex flex-col gap-y-3">
             <p className="text-lg font-medium leading-5 text-highlight-foreground/80">
-              {summary}
+              {description.split('\n')[1] || ''}
             </p>
             <div className="flex items-center gap-x-1 text-sm">
               <span className="text-highlight-foreground/60">Published by</span>
               <Address
-                address={creatorAddress}
+                address={proposer}
                 maxLength={AddressLength.Medium}
                 hasLink
                 showCopy={false}
@@ -217,7 +219,15 @@ const ViewProposal: React.FC = () => {
               proposal={{ ...proposal, result, totalVotingWeight }}
               refetch={() => {}}
             />
-            <ProposalActions loading={false} actions={proposal.actions}>
+            <ProposalActions
+              loading={false}
+              // @ts-ignore
+              actions={targets.map((target, i) => ({
+                target,
+                value: values[i],
+                calldata: calldatas[i],
+              }))}
+            >
               {(canQueue || canExecute) && (
                 <div className="flex flex-row items-center gap-x-4">
                   <Button

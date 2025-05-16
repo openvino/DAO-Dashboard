@@ -20,7 +20,7 @@ import { useAllProposals } from '../hooks/useAllProposals';
 import { useDaoTransfers } from '@/src/hooks/useDaoTransfers';
 import TokenAmount from '@/src/components/ui/TokenAmount';
 import { Address, AddressLength } from '@/src/components/ui/Address';
-import { useProposalCountFromApi } from '@/src/hooks/useProposalCountFromApi'; // ✅ nuevo
+import { useProposalCountFromApi } from '@/src/hooks/useProposalCountFromApi';
 
 const Dashboard = () => {
   const dao = {

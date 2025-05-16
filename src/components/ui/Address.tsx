@@ -29,11 +29,11 @@ type AddressProps = {
   address: string;
   maxLength: AddressLength;
   hasLink: boolean;
-  showCopy: boolean;
+  showCopy?: boolean;
   replaceYou?: boolean;
   jazziconSize?: 'sm' | 'md' | 'lg' | 'none';
   currentUser?: string;
-  link?: string; // ✅ nuevo parámetro opcional
+  link?: string;
 };
 
 export const Address: React.FC<AddressProps> = ({

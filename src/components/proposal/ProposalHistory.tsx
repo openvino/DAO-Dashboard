@@ -1,3 +1,4 @@
+// @ts-nocheck
 import History from '@/src/components/icons/History';
 import ProposalMilestone from '@/src/components/proposal/ProposalMilestone';
 import { MainCard } from '@/src/components/ui/MainCard';

@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardContent } from '@/src/components/ui/Card';
-import { Proposal } from '@/src/pages/Governance';
 import { ProposalStatusBadge } from '@/src/components/governance/ProposalStatusBadge';
 import { Address, AddressLength } from '@/src/components/ui/Address';
 import { HiOutlineArrowRight } from 'react-icons/hi2';
-import { cn, countdownText } from '@/src/lib/utils';
+import { countdownText } from '@/src/lib/utils';
 
-export default function ProposalCard({ proposal }: { proposal: Proposal }) {
+export default function ProposalCard({ proposal }: { proposal: any }) {
   const {
     id,
     status,

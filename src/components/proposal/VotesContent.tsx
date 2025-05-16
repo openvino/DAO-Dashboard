@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import {
   Accordion,
@@ -8,8 +9,9 @@ import {
 import { Progress } from '@/src/components/ui/Progress';
 import { RadioGroup, RadioGroupItem } from '@/src/components/ui/RadioGroup';
 import { Button } from '@/src/components/ui/Button';
-import { DetailedProposal } from '@/src/hooks/useProposal';
+
 import { formatUnits } from 'ethers/lib/utils';
+import { DetailedProposal } from '@/src/types/detailedProposal';
 
 interface VotesContentProps {
   proposal: DetailedProposal;

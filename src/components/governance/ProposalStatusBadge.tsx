@@ -1,4 +1,3 @@
-// src/components/governance/ProposalStatusBadge.tsx
 import { HiClock, HiCheckCircle, HiXCircle } from 'react-icons/hi2';
 
 export function ProposalStatusBadge({ status }: { status: string }) {

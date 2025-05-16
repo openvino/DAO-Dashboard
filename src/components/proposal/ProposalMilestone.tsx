@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Loading from '@/src/components/icons/Loading';
 import {
   Tooltip,

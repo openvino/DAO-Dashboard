@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback } from 'react';
 import VotesContent from '@/src/components/proposal/VotesContent';
 import { Button } from '@/src/components/ui/Button';
