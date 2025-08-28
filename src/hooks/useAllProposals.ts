@@ -55,6 +55,7 @@ export function useAllProposals() {
             'X-API-Secret': import.meta.env.VITE_API_SECRET!,
           },
         });
+        console.log('RESSSSSSS', res);
 
         if (!res.ok) throw new Error('Failed to fetch proposals from API');
 
