@@ -23,6 +23,36 @@ function interpretState(n: number): Proposal['status'] {
   return states[n] || 'Pending';
 }
 
+/** getLogs en ventanas < 1000 bloques */
+async function getLogsChunked(
+  provider: ethers.providers.Provider,
+  params: {
+    address?: string;
+    topics?: (string | null)[];
+    fromBlock: number;
+    toBlock: number;
+  },
+  chunkSize = 900
+) {
+  const latest = await provider.getBlockNumber();
+  let start = Math.max(0, params.fromBlock);
+  let end = Math.min(params.toBlock, latest);
+  if (end < start) return [];
+
+  const out: ethers.providers.Log[] = [];
+  while (start <= end) {
+    const windowEnd = Math.min(start + chunkSize, end);
+    const logs = await provider.getLogs({
+      ...params,
+      fromBlock: start,
+      toBlock: windowEnd,
+    });
+    out.push(...logs);
+    start = windowEnd + 1;
+  }
+  return out;
+}
+
 export function useProposalById(id: string) {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,27 +71,15 @@ export function useProposalById(id: string) {
           import.meta.env.VITE_API_URL
         }/api/routes/daoRoute`.replace(/([^:]\/)\/+/g, '$1');
         const secret = import.meta.env.VITE_API_SECRET;
-
-        if (!apiUrl || !secret) {
+        if (!apiUrl || !secret)
           throw new Error('Missing VITE_API_URL or VITE_API_SECRET');
-        }
 
-        let res: Response;
-        try {
-          res = await fetch(apiUrl, {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Secret': secret,
-            },
-          });
-        } catch (err) {
-          throw new Error(`Fetch failed: ${err}`);
-        }
-
-        if (!res || typeof res.ok === 'undefined') {
-          throw new Error('No response received from backend');
-        }
-
+        const res = await fetch(apiUrl, {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Secret': secret,
+          },
+        });
         if (!res.ok) {
           const body = await res.text().catch(() => '');
           throw new Error(
@@ -85,11 +103,14 @@ export function useProposalById(id: string) {
           provider
         );
 
+        // --- ProposalCreated en el mismo bloque (no necesita troceo) ---
+        const createdTopic =
+          governor.interface.getEventTopic('ProposalCreated');
         const logs = await provider.getLogs({
           address: governor.address,
           fromBlock: blockNumber,
           toBlock: blockNumber,
-          topics: [governor.interface.getEventTopic('ProposalCreated')],
+          topics: [createdTopic],
         });
 
         const ev = logs
@@ -107,6 +128,7 @@ export function useProposalById(id: string) {
         const creationBlock = await provider.getBlock(blockNumber);
         const creationDate = new Date(creationBlock.timestamp * 1000);
 
+        // --- Estado on-chain ---
         const [stateBN, snapshotBN, deadlineBN, votes] = await Promise.all([
           governor.state(id),
           governor.proposalSnapshot(id),
@@ -119,8 +141,13 @@ export function useProposalById(id: string) {
         );
         const totalVotes = against + forVotes + abstain;
 
-        const startBlock = await provider.getBlock(snapshotBN.toNumber());
-        const endBlock = await provider.getBlock(deadlineBN.toNumber());
+        const startBlkNum = snapshotBN.toNumber();
+        const endBlkNum = deadlineBN.toNumber();
+
+        const [startBlock, endBlock] = await Promise.all([
+          provider.getBlock(startBlkNum).catch(() => null),
+          provider.getBlock(endBlkNum).catch(() => null),
+        ]);
 
         const startDate = startBlock
           ? new Date(startBlock.timestamp * 1000)
@@ -129,6 +156,7 @@ export function useProposalById(id: string) {
           ? new Date(endBlock.timestamp * 1000)
           : creationDate;
 
+        // --- Decodificación de acciones desde ProposalCreated ---
         const targets = ev.args[2] as string[];
         const valuesBN = ev.args[3] as BigNumber[];
         const calldatas = ev.args[5] as string[];
@@ -151,7 +179,6 @@ export function useProposalById(id: string) {
               params: { target, value, calldata: data },
             };
           }
-
           try {
             const iface = new Interface(contractInfo.abi);
             const parsed = iface.parseTransaction({ data });
@@ -159,7 +186,6 @@ export function useProposalById(id: string) {
             parsed.functionFragment.inputs.forEach((input, idx) => {
               decodedParams[input.name] = parsed.args[idx];
             });
-
             return {
               interface: contractInfo.name,
               method: parsed.name,
@@ -179,35 +205,67 @@ export function useProposalById(id: string) {
           }
         });
 
-        const voteLogs = await governor.queryFilter(
-          governor.filters.VoteCast(),
-          snapshotBN.toNumber(),
-          deadlineBN.toNumber()
-        );
+        // --- VoteCast (troceado) ---
+        const latest = await provider.getBlockNumber();
+        const voteFrom = Math.min(startBlkNum, latest);
+        const voteTo = Math.min(endBlkNum, latest);
 
-        const votesDetailed = voteLogs.map((log) => {
-          const { voter, support, weight } = log.args;
-          return {
-            address: voter,
-            support: support.toString(),
-            weight: BigInt(weight.toString()),
-          };
-        });
+        let votesDetailed: {
+          address: string;
+          support: string;
+          weight: bigint;
+        }[] = [];
+        if (voteTo >= voteFrom) {
+          const voteTopic = governor.interface.getEventTopic('VoteCast');
+          const voteLogs = await getLogsChunked(provider, {
+            address: governor.address,
+            topics: [voteTopic],
+            fromBlock: voteFrom,
+            toBlock: voteTo,
+          });
+
+          votesDetailed = voteLogs
+            .map((log) => {
+              try {
+                const parsed = governor.interface.parseLog(log);
+                const { voter, support, weight } = parsed.args as any;
+                return {
+                  address: String(voter),
+                  support: support.toString(),
+                  weight: BigInt(weight.toString()),
+                };
+              } catch {
+                return null;
+              }
+            })
+            .filter(Boolean) as any[];
+        }
 
         const usedVotingWeight = votesDetailed.reduce(
           (acc, v) => acc + v.weight,
           0n
         );
 
+        // --- ProposalExecuted (troceado) ---
+        const execTopic = governor.interface.getEventTopic('ProposalExecuted');
+        const execLogs = await getLogsChunked(provider, {
+          address: governor.address,
+          topics: [execTopic],
+          fromBlock: blockNumber,
+          toBlock: blockNumber + 5000, // margen; igual va troceado
+        });
+
+        const exec = execLogs
+          .map((log) => {
+            try {
+              return governor.interface.parseLog(log);
+            } catch {
+              return null;
+            }
+          })
+          .find((log) => log?.args?.proposalId.toString() === id);
+
         let executionDate: Date | undefined;
-        const execLogs = await governor.queryFilter(
-          governor.filters.ProposalExecuted(),
-          blockNumber,
-          blockNumber + 1000
-        );
-        const exec = execLogs.find(
-          (log) => log.args?.proposalId.toString() === id
-        );
         if (exec) {
           const execBlock = await provider.getBlock(exec.blockNumber);
           executionDate = new Date(execBlock.timestamp * 1000);
@@ -234,13 +292,11 @@ export function useProposalById(id: string) {
           calldatas,
         };
 
-        if (!cancelled) {
-          setProposal(fullProposal);
-        }
+        if (!cancelled) setProposal(fullProposal);
       } catch (err: any) {
         console.error('Error loading proposal', err);
         if (!cancelled) {
-          setError(err.message || 'Unknown error');
+          setError(err?.message || 'Unknown error');
           setProposal(null);
         }
       } finally {
@@ -249,7 +305,6 @@ export function useProposalById(id: string) {
     };
 
     fetchProposal();
-
     return () => {
       cancelled = true;
     };

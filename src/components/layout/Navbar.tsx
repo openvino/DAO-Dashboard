@@ -61,9 +61,9 @@ const Navitem = ({ item }: { item: NavItem }) => {
 
 const Navbar = () => {
   return (
-    <div className="mt-2 flex w-full flex-row items-center justify-between lg:mt-0">
+    <div className="mt-20 flex w-full flex-row items-center justify-between lg:mt-0">
       {/* Desktop logo */}
-      <LogoFull className="hidden h-fit w-40 lg:block" />
+      <LogoFull className="mt-4 hidden h-[6rem] w-[6rem] lg:block" />
 
       {/* Mobile nav */}
       <nav className="relative lg:hidden">

@@ -41,11 +41,11 @@ const Dashboard = () => {
     error: errorProposals,
   } = useAllProposals();
 
-  const {
-    daoTransfers,
-    loading: loadingTransfers,
-    error: errorTransfers,
-  } = useDaoTransfers();
+  // const {
+  //   daoTransfers,
+  //   loading: loadingTransfers,
+  //   error: errorTransfers,
+  // } = useDaoTransfers();
 
   const {
     count: proposalCount,
@@ -112,7 +112,7 @@ const Dashboard = () => {
       {/* Side column */}
       <div className="col-span-full flex flex-col gap-y-6 lg:col-span-3">
         {/* Transfers */}
-        <MainCard
+        {/* <MainCard
           icon={HiCircleStack}
           header={
             <DefaultMainCardHeader
@@ -158,7 +158,7 @@ const Dashboard = () => {
           ) : (
             <p>No transfers found</p>
           )}
-        </MainCard>
+        </MainCard> */}
 
         {/* Members */}
         <MainCard
