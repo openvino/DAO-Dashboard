@@ -157,7 +157,8 @@ const StepContent = () => {
     case 1:
       return <Metadata />;
     case 2:
-      return <Voting />;
+      // return <Voting />;
+      return <Actions />;
     case 3:
       return <Actions />;
     case 4:
