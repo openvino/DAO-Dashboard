@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import GovernorArtifact from '@/src/abis/MyGovernor.json';
-import { Proposal } from '@/src/pages/Governance';
+import { Proposal } from '@/src/types/proposal';
 
 const GovernorABI = GovernorArtifact.abi;
 

@@ -24,6 +24,10 @@ const navItems: NavItem[] = [
     url: '/',
   },
   {
+    label: 'Launch Plan',
+    url: '/launch',
+  },
+  {
     label: 'Governance',
     url: '/governance',
   },

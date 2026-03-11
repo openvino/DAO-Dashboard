@@ -1,14 +1,14 @@
 import History from '@/src/components/icons/History';
 import ProposalMilestone from '@/src/components/proposal/ProposalMilestone';
 import { MainCard } from '@/src/components/ui/MainCard';
-import type { Proposal } from '@/src/pages/Governance';
+import type { DetailedProposal } from '@/src/types/proposal';
 
 const ProposalHistory = ({
   proposal,
   loading = false,
   className,
 }: {
-  proposal: Proposal;
+  proposal: DetailedProposal;
   loading?: boolean;
   className?: string;
 }) => {

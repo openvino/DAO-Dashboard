@@ -8,7 +8,7 @@ import {
 import { Progress } from '@/src/components/ui/Progress';
 import { RadioGroup, RadioGroupItem } from '@/src/components/ui/RadioGroup';
 import { Button } from '@/src/components/ui/Button';
-import { DetailedProposal } from '@/src/hooks/useProposal';
+import { DetailedProposal } from '@/src/types/proposal';
 import { formatUnits } from 'ethers/lib/utils';
 
 interface VotesContentProps {

@@ -34,12 +34,28 @@ const TOKENS = [
     decimals: 6,
   },
   {
-    address: import.meta.env.VITE_OVI_ADDRESS,
-    symbol: 'OVI',
-    name: 'Openvino DAO Token',
+    address:
+      import.meta.env.VITE_WOVI_ADDRESS ||
+      import.meta.env.VITE_OVI_ADDRESS ||
+      undefined,
+    symbol: 'gOVI',
+    name: 'Governance Openvino DAO Token',
     decimals: 18,
   },
-];
+  {
+    address: import.meta.env.VITE_OVI_ADDRESS,
+    symbol: 'OVI',
+    name: 'Openvino DAO Token (splits)',
+    decimals: 18,
+  },
+]
+  .filter((token) => !!token.address)
+  .filter(
+    (token, index, array) =>
+      array.findIndex(
+        (t) => t.address?.toLowerCase() === token.address?.toLowerCase()
+      ) === index
+  );
 
 export const useDaoBalance = ({
   useDummyData = false,
@@ -49,6 +65,7 @@ export const useDaoBalance = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetch = async () => {
       try {
         setLoading(true);
@@ -75,8 +92,10 @@ export const useDaoBalance = ({
               updateDate: now,
             },
           ];
-          setDaoBalances(dummy);
-          setError(null);
+          if (!cancelled) {
+            setDaoBalances(dummy);
+            setError(null);
+          }
           return;
         }
 
@@ -119,17 +138,24 @@ export const useDaoBalance = ({
           })
         );
 
-        setDaoBalances([nativeBalance, ...tokenBalances]);
-        setError(null);
-      } catch (err: any) {
-        setError(err.message ?? 'Unknown error');
-        setDaoBalances([]);
+        if (!cancelled) {
+          setDaoBalances([nativeBalance, ...tokenBalances]);
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+          setDaoBalances([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetch();
+    return () => {
+      cancelled = true;
+    };
   }, [useDummyData]);
 
   return {

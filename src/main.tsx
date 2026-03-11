@@ -14,6 +14,7 @@ import NewProposal from '@/src/pages/NewProposal';
 import Verification from '@/src/pages/Verification';
 import ViewProposal from '@/src/pages/ViewProposal';
 import { Toaster } from '@/src/components/ui/Toaster';
+import TokenLaunch from '@/src/pages/TokenLaunch';
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       {
         path: '',
         element: <Dashboard />,
+      },
+      {
+        path: 'launch',
+        element: <TokenLaunch />,
       },
       {
         path: 'governance',

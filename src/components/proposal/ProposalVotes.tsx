@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/src/components/ui/Dialog';
 import { DefaultMainCardHeader, MainCard } from '@/src/components/ui/MainCard';
-import { DetailedProposal } from '@/src/hooks/useProposal';
+import { DetailedProposal } from '@/src/types/proposal';
 import { calcBigintPercentage, cn } from '@/src/lib/utils';
 import { format } from 'date-fns';
 import { HiChatBubbleLeftRight } from 'react-icons/hi2';
@@ -98,8 +98,8 @@ const ProposalVotes = ({
         const tx = await governor.castVote(proposal.id, support);
         await tx.wait();
         refetch();
-      } catch (err) {
-        console.error('❌ Error al votar:', err);
+      } catch (_err) {
+        // TODO: surface voting error to user via toast
       }
     },
     [proposal, account, refetch]

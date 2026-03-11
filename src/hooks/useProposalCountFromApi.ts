@@ -22,9 +22,8 @@ export function useProposalCountFromApi() {
 
         const proposals: { id: string; block: number }[] = await res.json();
         setCount(proposals.length);
-      } catch (err: any) {
-        console.error('❌ Error fetching proposal count', err);
-        setError(err.message || 'Unknown error');
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
       }

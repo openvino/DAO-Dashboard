@@ -17,7 +17,7 @@ import {
   StepNavigator,
   useNewProposalFormContext,
 } from '@/src/pages/NewProposal';
-import { ProposalResource } from '@/src/hooks/useProposal';
+import { ProposalResource } from '@/src/types/proposal';
 import { UrlPattern } from '@/src/lib/patterns';
 
 export interface ProposalFormMetadata {
@@ -65,12 +65,7 @@ export const Metadata = () => {
     control: control,
   });
 
-  console.log(dataStep1);
-  console.log(resources);
-
   const onSubmit = (data: ProposalFormMetadata) => {
-    // Handle submission
-    console.log(data);
     setDataStep1(data);
     setStep(2);
   };

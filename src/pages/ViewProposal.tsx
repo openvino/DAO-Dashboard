@@ -11,7 +11,6 @@ import ProposalHistory from '@/src/components/proposal/ProposalHistory';
 import ConnectWalletWarning from '@/src/components/ui/ConnectWalletWarning';
 import { countdownText } from '@/src/lib/utils';
 import { useProposalById } from '@/src/hooks/useProposalById';
-import { hardcodedProposalIds } from './Governance';
 import { useActiveAccount } from 'thirdweb/react';
 import { ethers } from 'ethers';
 import { govAbi } from '@/src/abis/governor';
@@ -93,7 +92,6 @@ const ViewProposal: React.FC = () => {
         return 'Ended ' + countdownText(endDate) + ' ago';
     }
   };
-  console.log('STATUS', status);
 
   const canQueue = status === 'Succeeded';
   const canExecute = status === 'Queued';
@@ -117,9 +115,8 @@ const ViewProposal: React.FC = () => {
       const parsedValues = values.map((v, i) => {
         try {
           return ethers.BigNumber.from(v);
-        } catch (err) {
-          console.error(`❌ Valor inválido en values[${i}]:`, v);
-          throw new Error(`Invalid value at index ${i}`);
+        } catch (_err) {
+          throw new Error(`Invalid value at index ${i}: ${v}`);
         }
       });
 
@@ -133,16 +130,8 @@ const ViewProposal: React.FC = () => {
           calldatas,
           descriptionHash
         );
-        console.log('📥 Proposal queued:', tx.hash);
         await tx.wait();
       } else if (canExecute) {
-        console.log({
-          targets,
-          parsedValues,
-          calldatas,
-          descriptionHash,
-        });
-
         tx = await governor.execute(
           targets,
           parsedValues,
@@ -152,7 +141,6 @@ const ViewProposal: React.FC = () => {
             gasLimit: 800_000,
           }
         );
-        console.log('✅ Proposal executed:', tx.hash);
         await tx.wait();
       } else {
         throw new Error(
@@ -160,13 +148,10 @@ const ViewProposal: React.FC = () => {
         );
       }
     } catch (err: any) {
-      console.error('❌ Error al procesar propuesta:', err);
       const revertData =
         err?.error?.data?.data ?? err?.data?.data ?? err?.data ?? null;
-
       if (typeof revertData === 'string') {
-        const decoded = decodeRevertReason(revertData);
-        if (decoded) console.error('💥 Revert reason:', decoded);
+        decodeRevertReason(revertData);
       }
     }
   };

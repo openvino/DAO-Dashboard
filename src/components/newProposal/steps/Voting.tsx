@@ -52,7 +52,7 @@ export const Voting = () => {
 
   const { settings, error } = useVotingSettings({});
 
-  if (error) console.error('Voting settings fetching error', error);
+  void error; // displayed to user if settings are unavailable
 
   const {
     register,
@@ -81,10 +81,8 @@ export const Voting = () => {
   });
 
   const onSubmit = (data: ProposalFormVotingSettings) => {
-    console.log(data);
     setStep(3);
     setDataStep2(data);
-    // Handle submission
   };
 
   //rember the values of the inputs when the user clicks back, so it can be used when the user clicks next again.
@@ -233,7 +231,7 @@ export const EndTime = ({
 
   //retrieve settings for the minDuration
   const { settings, error } = useVotingSettings({});
-  if (error) console.error('Voting settings fetching error', error);
+  void error; // displayed to user if settings are unavailable
 
   //initialize minEndDate and minEndTime
   let minEndDate = undefined;

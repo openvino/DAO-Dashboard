@@ -5,12 +5,11 @@ import { baseSepolia } from 'thirdweb/chains';
 import { ethers5Adapter } from 'thirdweb/adapters/ethers5';
 import { client } from '@/src/config/thirdwebClient';
 import GovernorArtifact from '@/src/abis/MyGovernor.json';
-import type { Proposal } from '@/src/pages/Governance';
-import type { IProposalAction } from '@/src/components/proposal/ProposalActions';
+import type { DetailedProposal, IProposalAction } from '@/src/types/proposal';
 import { knownContracts } from '@/src/utils/knownContracts';
 
-function interpretState(n: number): Proposal['status'] {
-  const states: Proposal['status'][] = [
+function interpretState(n: number): DetailedProposal['status'] {
+  const states: DetailedProposal['status'][] = [
     'Pending',
     'Active',
     'Canceled',
@@ -54,7 +53,7 @@ async function getLogsChunked(
 }
 
 export function useProposalById(id: string) {
-  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [proposal, setProposal] = useState<DetailedProposal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -271,7 +270,7 @@ export function useProposalById(id: string) {
           executionDate = new Date(execBlock.timestamp * 1000);
         }
 
-        const fullProposal: Proposal = {
+        const fullProposal: DetailedProposal = {
           id,
           status: interpretState(Number(stateBN)),
           creatorAddress: proposer,
@@ -293,10 +292,9 @@ export function useProposalById(id: string) {
         };
 
         if (!cancelled) setProposal(fullProposal);
-      } catch (err: any) {
-        console.error('Error loading proposal', err);
+      } catch (err: unknown) {
         if (!cancelled) {
-          setError(err?.message || 'Unknown error');
+          setError(err instanceof Error ? err.message : 'Unknown error');
           setProposal(null);
         }
       } finally {

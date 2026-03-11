@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardContent } from '@/src/components/ui/Card';
-import { Proposal } from '@/src/pages/Governance';
+import { Proposal } from '@/src/types/proposal';
 import { ProposalStatusBadge } from '@/src/components/governance/ProposalStatusBadge';
 import { Address, AddressLength } from '@/src/components/ui/Address';
 import { HiOutlineArrowRight } from 'react-icons/hi2';

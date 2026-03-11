@@ -20,7 +20,11 @@ export type UseDaoTransfersData = {
 
 // Cargar desde .env
 const USDC_ADDRESS = import.meta.env.VITE_USDC_ADDRESS?.toLowerCase() ?? '';
-const OVI_ADDRESS = import.meta.env.VITE_OVI_ADDRESS?.toLowerCase() ?? '';
+const WOVI_ADDRESS =
+  import.meta.env.VITE_WOVI_ADDRESS?.toLowerCase() ||
+  import.meta.env.VITE_OVI_ADDRESS?.toLowerCase() ||
+  '';
+const OVI_ADDRESS = import.meta.env.VITE_OVI_ADDRESS?.toLowerCase() || '';
 
 const HARDCODED_TRANSFERS: DaoTransfer[] = [
   {
@@ -53,8 +57,8 @@ const HARDCODED_TRANSFERS: DaoTransfer[] = [
     from: '0x87495d92Ad7655BF8bcC6447ea715498238517aF',
     to: '0x228746DcDf0633299a630484BfE4ccB08711e0De',
     amount: 52_000_000_000_000_000_000n,
-    tokenAddress: OVI_ADDRESS,
-    tokenSymbol: 'OVI',
+    tokenAddress: WOVI_ADDRESS,
+    tokenSymbol: 'gOVI',
     decimals: 18,
     creationDate: new Date('2025-05-15T01:04:32Z'),
     type: 'withdraw',

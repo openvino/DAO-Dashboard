@@ -5,12 +5,10 @@ import {
   MainCard,
   MainCardProps,
 } from '@/src/components/ui/MainCard';
+import type { IProposalAction } from '@/src/types/proposal';
 
-export interface IProposalAction {
-  interface: string;
-  method: string;
-  params: { [name: string]: any };
-}
+// Re-export for backwards compatibility
+export type { IProposalAction };
 
 export interface ProposalActionsProps
   extends Omit<MainCardProps, 'icon' | 'header'> {
